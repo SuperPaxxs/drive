@@ -6,6 +6,8 @@
 
 ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneDrive ，可通过插件扩展功能。
 
+https://github.com/SuperPaxxs/sharelist-views
+
 ## 目录
 * [功能说明](#功能说明) 
 * [安装](#安装) 
