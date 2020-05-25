@@ -16,9 +16,9 @@ const isProxyPath = (path , paths) => {
 
 const output = async (ctx , data)=>{
 
-  const isPreview = ctx.request.querystring.indexOf('preview') >= 0
+  const isPreview = ctx.runtime.isPreview
 
-  const isforward = ctx.request.querystring.indexOf('forward') >= 0
+  const isforward = ctx.runtime.isForward
 
   const downloadLinkAge = config.getConfig('max_age_download')
 
@@ -88,6 +88,11 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
+    if( !config.getConfig('anonymous_enable') && !ctx.runtime.isAdmin){
+      await ctx.renderSkin('manage')
+      return
+    }
+
     let downloadLinkAge = config.getConfig('max_age_download')
     let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
     //exclude folder
@@ -190,7 +195,7 @@ module.exports = {
       })
     }
     else if(data.type == 'auth_response'){
-      let result = {status:0 , message:"success"}
+      let result = {status:0 , message:"success" , rurl:ctx.query.rurl}
       if(!data.result){
         result.status = 403
         result.message = '验证失败'

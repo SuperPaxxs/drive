@@ -41,7 +41,7 @@ class Manager {
 
   async ocr(image){
     let resp = await this.recognize(image,'189cloud')
-    let ret = { error:resp.error }
+    let ret = { error:resp.error , msg:resp.msg }
     if(!resp.error){
       let code = resp.result.replace(/[^a-z0-9]/i,'')
       // retry
@@ -69,9 +69,11 @@ class Manager {
       let hit = this.clientMap[data.username]
       if(hit){
         if( !hit.cookies || (Date.now() - hit.updated_at) > COOKIE_MAX_AGE ){
-          let result = await this.create(hit.username , hit.password)
+          let { result , msg } = await this.create(hit.username , hit.password)
           if( result ){
             hit = this.clientMap[data.username]
+          }else{
+            return { error : msg }
           }
         }
       }
@@ -173,7 +175,7 @@ class Manager {
 
         let resp = await this.request.get(captchaUrl,{
           headers:{
-            Cookies:cookies,
+            Cookie:cookies,
             Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
           },
           encoding: null
@@ -188,6 +190,7 @@ class Manager {
         //服务不可用
         if(error){
           formdata.validateCode = ''
+          msg = '验证码识别接口无法使用'
           break;
         }
         else if(code){
@@ -226,7 +229,6 @@ class Manager {
         await this.updateHandle(this.stringify({username , password}))
 
         this.clientMap[username] = client
-        console.log('cookies>>',cookies)
         result = true
         break;
       }else{
@@ -235,9 +237,6 @@ class Manager {
 
     }
 
-    if( needcaptcha && !formdata.validateCode){
-      msg = '请设置验证码识别接口！'
-    }
     return { result , msg }
   }
 
@@ -247,7 +246,7 @@ class Manager {
     if(data.username){
       let hit = this.clientMap[data.username]
       if(hit){
-        await this.create(hit.username , hit.password)
+        return await this.create(hit.username , hit.password)
       }
     }
   }
@@ -292,6 +291,10 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let { path, cookies, username, error } = await manager.get(id)
 
+    if( error ){
+      return { id, type: 'folder', protocol: defaultProtocol,body: await install(error) }
+    }
+
     if( cookies ) {
 
       return { cookies , path , username }
@@ -312,14 +315,19 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
   }
 
-  const fetchData = async (...rest) => {
+  const fetchData = async (id,rest) => {
     let resp , retry_times = 5
     while(true && --retry_times){
-      resp = await request.get(...rest)
+      resp = await request({async:true,...rest})
       //cookie失效
       if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
-        await manager.update(id)
-        continue
+        let { result , msg } = await manager.update(id)
+        if( result ){
+          resp = { msg }
+          break;
+        }else{
+          continue
+        }
       }else{
         break;
       }
@@ -350,7 +358,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
    
     if(!path) path = -11
-    let resp = await fetchData(`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,{
+    let resp = await fetchData(id,{
+      url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,
+      method:'GET',
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         'Cookie': cookies,
@@ -359,7 +369,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     })
 
     if (!resp || !resp.body) {
-      return { id, type: 'folder', protocol: defaultProtocol,body:'解析错误' }
+      return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
 
     }
     let children = resp.body.data.map( file => {
@@ -400,7 +410,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let resp = await fetchData(data.downloadUrl,{
+    let resp = await fetchData(id,{
+      url:data.downloadUrl,
+      method:'GET',
       followRedirect:false ,
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
