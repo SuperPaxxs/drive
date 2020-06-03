@@ -236,7 +236,10 @@ class Manager {
         }else{
           let cookie = resp.headers['set-cookie'].join('; ')
           let client = { username , password , cookie , updated_at: Date.now() }
-          await this.updateHandle(this.stringify({username , password , cookie}))
+          if(this.clientMap[username]){
+            client.path = this.clientMap[username].path
+          }
+          await this.updateHandle(this.stringify(client))
           this.clientMap[username] = client
           result = true
           break;
@@ -382,9 +385,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     if (!resp || !resp.body) {
       return { id, type: 'folder', protocol: defaultProtocol,body:'解析错误' }
-
     }
-    let children = [].concat(resp.body.dci.cataloginfos,resp.body.dci.contents).map( file => {
+    let children = [].concat(resp.body.dci.cataloginfos || [],resp.body.dci.contents || []).map( file => {
       let folder = !!file.ETagOprType
       let subid = path + '/' + (folder ? file.catalogID : file.contentID)
       let item = {

@@ -127,7 +127,7 @@ class Manager {
     }
   }
   //create cookies
-  async create(username , password){
+  async create(username , password , path = '/'){
     //0 准备工作： 获取必要数据
     let headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
     let { body , headers:headers2} = await this.request.get('https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action',{headers})
@@ -187,6 +187,8 @@ class Manager {
           imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
         }
         let { error , code } = await this.ocr(imgBase64)
+        console.log('validateCode:['+code+']')
+
         //服务不可用
         if(error){
           formdata.validateCode = ''
@@ -195,7 +197,6 @@ class Manager {
         }
         else if(code){
           formdata.validateCode = code
-          console.log('validateCode:['+code+']')
         }
         //无法有效识别
         else{
@@ -221,18 +222,24 @@ class Manager {
 
         continue;
       }
+
       if( resp.body && resp.body.toUrl ){
         resp = await this.request.get(resp.body.toUrl , { followRedirect:false, headers })
         let cookies = resp.headers['set-cookie'].join('; ')
-        let client = { username , password , cookies , updated_at: Date.now() }
-
-        await this.updateHandle(this.stringify({username , password}))
+        let client = { username , password , cookies , updated_at: Date.now() , path }
+        if(this.clientMap[username]){
+          client.path = this.clientMap[username].path
+        }
 
         this.clientMap[username] = client
+
+        await this.updateHandle(this.stringify({username , password, path:client.path}))
+
         result = true
         break;
       }else{
         msg = resp.body.msg
+        break;
       }
 
     }
@@ -242,7 +249,6 @@ class Manager {
 
   async update(id){
     let data = this.parse(id)
-
     if(data.username){
       let hit = this.clientMap[data.username]
       if(hit){
@@ -367,7 +373,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       },
       json:true
     })
-
+  
     if (!resp || !resp.body) {
       return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
 

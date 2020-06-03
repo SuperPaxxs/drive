@@ -68,7 +68,7 @@ const handlers = async (a, body , ctx) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language,anonymous_enable } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language,anonymous_enable, anonymous_download, index_enable } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -100,6 +100,10 @@ const handlers = async (a, body , ctx) => {
       preview_enable = preview_enable == '1' ? 1 : 0
       opts.preview_enable = preview_enable
     }
+    if (index_enable) {
+      index_enable = index_enable == '1' ? 1 : 0
+      opts.index_enable = index_enable
+    }
 
     if (readme_enable) {
       readme_enable = readme_enable == '1' ? 1 : 0
@@ -120,10 +124,6 @@ const handlers = async (a, body , ctx) => {
       opts.webdav_path = webdav_path
     }
 
-    if(ocr_server){
-      opts.ocr_server = ocr_server
-    }
-
     if(language !== undefined){
       opts.language = language
       //console.log(ctx,ctx.__setLocale)
@@ -137,6 +137,9 @@ const handlers = async (a, body , ctx) => {
     opts.ignore_paths.__root__ = ignore_paths.split(',')
     opts.proxy_paths = proxy_paths.split(',')
     opts.proxy_server = proxy_server
+    opts.anonymous_download = anonymous_download
+    opts.ocr_server = ocr_server || ''
+
     await config.save(opts)
     result.message = 'Success'
   }
