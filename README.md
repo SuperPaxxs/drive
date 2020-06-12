@@ -136,6 +136,17 @@ https://github.com/SuperPaxxs/sharelist-views
 建议填写```/```，ShareList将自动开启挂载向导，按指示操作即可。  
 **注意：access_token每隔30天需手动更新一次，到期前24小时内访问对应路径时会有更新提示。**   
 
+#### 3. 企业盘挂载
+由[drive.189cloud.business.js](app/plugins/drive.189cloud.business.js)插件实现。  
+```
+挂载标示：ctcb
+挂载内容：  
+    //用户名/初始文件夹ID?password=密码 
+    /
+```
+建议填写```/```，ShareList将自动开启挂载向导，按指示填写用户名密码即可。    
+
+
 ***
 
 ### 挂载和彩云
@@ -355,7 +366,7 @@ bash update.sh
 ```bash
 docker build -t yourname/sharelist .
 
-docker run -d -v /etc/sharelist:/app/cache -p 33001:33001 --name="sharelist" yourname/sharelist
+docker run -d -v /etc/sharelist:/sharelist/cache -p 33001:33001 --name="sharelist" yourname/sharelist
 ```
 
 OR
@@ -371,7 +382,3 @@ WebDAV 目录 `http://localhost:33001/webdav`
 ### Heroku
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/reruin/sharelist-heroku)
-
-### Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/reruin/sharelist)
